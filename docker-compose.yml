@@ -1,0 +1,44 @@
+version: "3"
+services:
+    cache:
+      container_name: accountability_cache
+      image: "redislabs/redismod"
+      ports:
+        - "6379:6379"
+      volumes:
+        - ./data:/data
+      entrypoint: >
+        redis-server
+          --loadmodule /usr/lib/redis/modules/rejson.so
+          --loglevel warning 
+          --requirepass redispass
+          --appendonly yes
+      networks:
+        - accountability
+      deploy:
+        replicas: 1
+        restart_policy:
+          condition: on-failure
+    data_ingester:
+        container_name: data_ingester
+        image: "pokemonpower92/data_ingester"
+        ports:
+            - "5001:5000"
+        depends_on:
+        - cache
+        environment:
+            PYTHONUNBUFFERED: 1
+            DEBUG: "0"
+            REDIS_HOST: cache
+            REDIS_PORT: 6379
+            REDIS_PASSWORD: redispass
+        networks:
+          - accountability
+
+volumes:
+  cache:
+    driver: local
+
+networks:
+  accountability:
+    driver: bridge
